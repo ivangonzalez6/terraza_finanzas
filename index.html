@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terraza Luna · Finanzas</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700&family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f1e8;--bg2:#fff;--ink:#1a1610;--dim:#4a4337;--faint:#7a7264;
+  --line:#d8cfbd;--line2:#c4b89f;--gold:#8a6420;--golds:#6b4d18;
+  --gold-pale:#fff8e8;--ok:#3a7a3a;--ok-pale:#f0f9ec;
+  --danger:#a8442f;--danger-pale:#fff0ed;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{font-family:'Inter Tight',sans-serif;color:var(--ink);background:var(--bg);min-height:100vh}
+body{background:
+  radial-gradient(900px 500px at 90% -10%, rgba(138,100,32,.08), transparent 60%),
+  radial-gradient(700px 400px at -10% 110%, rgba(138,100,32,.05), transparent 60%),
+  var(--bg);
+  min-height:100vh}
+
+.app{max-width:560px;margin:0 auto;padding:18px 16px 80px}
+@media(min-width:768px){.app{max-width:700px;padding:22px 24px 80px}}
+@media(min-width:1100px){.app{max-width:920px;padding:28px 36px 80px}}
+
+/* ── Header ── */
+.head{padding:8px 0 18px;text-align:center;border-bottom:1px solid var(--line);margin-bottom:18px;position:relative}
+.h-title{font-family:'Cormorant Garamond',serif;font-size:clamp(28px,5vw,38px);font-weight:600;letter-spacing:.2em;text-transform:uppercase;line-height:1;color:var(--ink)}
+.h-sub{font-size:10px;letter-spacing:.4em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-top:6px}
+.h-user{position:absolute;top:8px;right:0;font-size:9px;color:var(--faint);letter-spacing:.2em;text-transform:uppercase;font-weight:600;display:flex;align-items:center;gap:6px}
+.h-logout{background:none;border:1px solid var(--line);color:var(--faint);font-size:9px;letter-spacing:.15em;text-transform:uppercase;padding:5px 10px;border-radius:999px;cursor:pointer;font-weight:600}
+.h-logout:active{background:var(--line);color:var(--dim)}
+
+/* ── Today summary card ── */
+.sum-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 18px;margin-bottom:18px;box-shadow:0 2px 8px rgba(60,45,20,.04)}
+.sum-date{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--faint);font-weight:600;text-align:center;margin-bottom:10px}
+.sum-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center}
+.sum-grid > div{padding:8px 4px}
+.sum-grid > div + div{border-left:1px solid var(--line)}
+.sum-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:4px}
+.sum-val{font-family:'Cormorant Garamond',serif;font-size:clamp(20px,5vw,26px);font-weight:600;line-height:1.1}
+.sum-val.ing{color:var(--ok)}
+.sum-val.eg{color:var(--danger)}
+.sum-val.ut{color:var(--gold)}
+
+/* ── Botones grandes ── */
+.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+@media(min-width:768px){.action-grid{gap:14px}}
+
+.btn-big{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:22px 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:all .15s;font-family:'Inter Tight',sans-serif}
+.btn-big:active{transform:scale(.98)}
+.btn-big.ing{border-color:var(--ok);background:linear-gradient(180deg,#fff,var(--ok-pale))}
+.btn-big.ing:hover{box-shadow:0 6px 20px rgba(58,122,58,.18)}
+.btn-big.eg{border-color:var(--danger);background:linear-gradient(180deg,#fff,var(--danger-pale))}
+.btn-big.eg:hover{box-shadow:0 6px 20px rgba(168,68,47,.18)}
+.btn-big-icon{font-size:28px}
+.btn-big-lbl{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.btn-big.ing .btn-big-lbl{color:var(--ok)}
+.btn-big.eg .btn-big-lbl{color:var(--danger)}
+
+.btn-report{display:flex;justify-content:center;align-items:center;gap:10px;background:linear-gradient(135deg,var(--gold),var(--golds));color:#fff;border:none;width:100%;padding:14px;border-radius:12px;font-family:'Inter Tight',sans-serif;font-size:11px;letter-spacing:.3em;text-transform:uppercase;font-weight:600;cursor:pointer;transition:all .15s;box-shadow:0 4px 14px rgba(138,100,32,.25);margin-bottom:18px}
+.btn-report:active{transform:scale(.98)}
+.btn-report .icn{font-size:16px}
+
+/* ── Subcategory buttons ── */
+.subcat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(min-width:600px){.subcat-grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:900px){.subcat-grid{grid-template-columns:repeat(4,1fr)}}
+.subcat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 12px;text-align:center;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.subcat:active{transform:scale(.98);border-color:var(--gold)}
+.subcat:hover{border-color:var(--line2);box-shadow:0 4px 14px rgba(138,100,32,.08)}
+.subcat-icon{font-size:24px}
+.subcat-name{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;line-height:1.2}
+.subcat-note{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);font-weight:600}
+
+/* ── Back btn ── */
+.back-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.back-btn{background:#fff;border:1px solid var(--line);padding:8px 14px;border-radius:999px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;color:var(--dim);cursor:pointer}
+.back-btn:active{background:var(--line)}
+.section-title{flex:1;font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+
+/* ── Form ── */
+.form-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 18px}
+.flbl{display:block;font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:6px;margin-top:14px}
+.flbl:first-of-type{margin-top:0}
+.finput,input[type="text"],input[type="number"],input[type="password"],textarea,select{
+  width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-family:'Inter Tight',sans-serif;font-size:14px;color:var(--ink);outline:none;transition:border-color .15s}
+.finput:focus,input:focus,textarea:focus,select:focus{border-color:var(--gold)}
+textarea{resize:vertical;min-height:60px;font-family:inherit}
+
+.amount-input{
+  font-family:'Cormorant Garamond',serif!important;
+  font-size:34px!important;
+  font-weight:600!important;
+  text-align:center;
+  color:var(--gold)!important;
+  padding:14px!important;
+}
+.amount-prefix{position:relative}
+.amount-prefix::before{content:'$';position:absolute;left:18px;top:50%;transform:translateY(-50%);font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--faint);pointer-events:none}
+.amount-input{padding-left:32px!important}
+
+.pm-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
+.pm-opt{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;font-size:11px;letter-spacing:.15em;text-transform:uppercase;font-weight:600;color:var(--dim);transition:all .15s}
+.pm-opt.active{background:var(--gold);color:#fff;border-color:var(--gold)}
+
+.btn{flex:1;padding:13px;border:none;border-radius:10px;font-family:'Inter Tight',sans-serif;font-size:11px;letter-spacing:.25em;text-transform:uppercase;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-p{background:var(--gold);color:#fff}
+.btn-p:active{background:var(--golds)}
+.btn-p:disabled{opacity:.5;cursor:not-allowed}
+.btn-g{background:#fff;color:var(--dim);border:1px solid var(--line)}
+.btn-g:active{background:var(--line)}
+.btn-d{background:var(--danger);color:#fff}
+.btn-d:active{opacity:.85}
+.btn-row{display:flex;gap:8px;margin-top:18px}
+
+.ferr{font-size:11px;color:var(--danger);margin-top:8px;min-height:14px}
+
+/* ── Reports ── */
+.period-tabs{display:flex;gap:0;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:14px;overflow-x:auto}
+.period-tabs::-webkit-scrollbar{display:none}
+.ptab{flex:1;background:none;border:none;padding:9px 12px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;color:var(--faint);cursor:pointer;border-radius:999px;white-space:nowrap;transition:all .15s}
+.ptab.active{background:var(--ink);color:#fff}
+
+.kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 12px;text-align:center}
+.kpi.ing{border-top:3px solid var(--ok)}
+.kpi.eg{border-top:3px solid var(--danger)}
+.kpi.ut{border-top:3px solid var(--gold)}
+.kpi-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:6px}
+.kpi-val{font-family:'Cormorant Garamond',serif;font-size:clamp(22px,5.5vw,30px);font-weight:600;line-height:1.05}
+.kpi.ing .kpi-val{color:var(--ok)}
+.kpi.eg .kpi-val{color:var(--danger)}
+.kpi.ut .kpi-val{color:var(--gold)}
+.kpi-sub{font-size:9px;color:var(--faint);letter-spacing:.1em;margin-top:4px}
+
+.breakdown{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.breakdown-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.breakdown-title .total{color:var(--gold);font-size:18px}
+.b-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.b-row:last-child{border-bottom:0}
+.b-row-name{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.b-bar{width:36px;height:4px;background:var(--line);border-radius:2px;overflow:hidden;flex-shrink:0}
+.b-bar-fill{height:100%;background:var(--gold)}
+.b-row.ing .b-bar-fill{background:var(--ok)}
+.b-row.eg .b-bar-fill{background:var(--danger)}
+.b-amt{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px}
+
+/* ── Movements list ── */
+.mvs{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-top:12px}
+.mvs h3{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.mv{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.mv:last-child{border-bottom:0}
+.mv-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.mv-dot.ing{background:var(--ok)}
+.mv-dot.eg{background:var(--danger)}
+.mv-info{flex:1;min-width:0}
+.mv-cat{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600;line-height:1.2}
+.mv-desc{font-size:10px;color:var(--faint);letter-spacing:.1em;margin-top:1px}
+.mv-amt{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px;white-space:nowrap}
+.mv-amt.ing{color:var(--ok)}
+.mv-amt.eg{color:var(--danger)}
+.mv-del{background:none;border:none;color:var(--faint);font-size:14px;cursor:pointer;padding:4px 8px;opacity:.5}
+.mv-del:active{opacity:1;color:var(--danger)}
+
+.empty{text-align:center;padding:36px 16px;color:var(--faint)}
+.empty .etit{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--dim);margin-bottom:5px}
+.empty .esub{font-size:10px;letter-spacing:.2em;text-transform:uppercase}
+
+/* ── Login ── */
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:36px 28px;max-width:380px;width:100%;box-shadow:0 4px 24px rgba(60,45,20,.06)}
+.login-title{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;text-align:center;margin-bottom:4px}
+.login-sub{font-size:10px;letter-spacing:.4em;text-transform:uppercase;color:var(--faint);text-align:center;margin-bottom:24px;font-weight:600}
+.pw-wrap{position:relative}
+.pw-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:4px 8px;color:var(--faint)}
+
+/* ── View switching ── */
+.view{display:none}
+.view.active{display:block}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#c9a35b;border:1px solid var(--gold);border-radius:10px;padding:10px 18px;font-size:11px;letter-spacing:.15em;opacity:0;pointer-events:none;transition:all .3s;z-index:999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Sync indicator ── */
+.sync-rule{background:var(--gold-pale);border:1px solid var(--line2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--dim);display:flex;gap:10px;align-items:center}
+.sync-rule strong{color:var(--gold);font-weight:600}
+
+/* ── Auto-fill button ── */
+.auto-card{background:linear-gradient(135deg,#fff8e8,#fff);border:1px solid var(--gold);border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.auto-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;letter-spacing:.05em}
+.auto-desc{font-size:11px;color:var(--dim);margin-top:4px;line-height:1.4}
+.auto-action{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
+.auto-amt{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--gold)}
+
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--line2) 30%,var(--line2) 70%,transparent);margin:14px 0}
+
+</style>
+</head>
+<body>
+
+<!-- ════ LOGIN ════ -->
+<div id="loginView" class="login">
+  <div class="login-card">
+    <div class="login-title">Terraza Luna</div>
+    <div class="login-sub">Finanzas</div>
+    <label class="flbl">Usuario</label>
+    <input id="loginUser" type="text" placeholder="usuario">
+    <label class="flbl">Contraseña</label>
+    <div class="pw-wrap">
+      <input id="loginPass" type="password" placeholder="••••••••">
+      <button class="pw-eye" id="togglePass" type="button">👁</button>
+    </div>
+    <div class="ferr" id="loginErr"></div>
+    <button class="btn btn-p" id="loginBtn" style="width:100%;margin-top:12px;padding:14px">Entrar</button>
+  </div>
+</div>
+
+<!-- ════ APP ════ -->
+<div id="appView" class="app" style="display:none">
+
+  <!-- HEAD -->
+  <header class="head">
+    <div class="h-user" id="hUser"></div>
+    <h1 class="h-title">Finanzas</h1>
+    <div class="h-sub">Terraza Luna</div>
+  </header>
+
+  <!-- ═══ HOME ═══ -->
+  <div class="view active" id="view-home">
+    <button class="btn-report" id="goReportsBtn">
+      <span class="icn">📊</span>
+      <span>Ver Reportes</span>
+    </button>
+
+    <div class="sum-card">
+      <div class="sum-date" id="todayDate"></div>
+      <div class="sum-grid">
+        <div>
+          <div class="sum-lbl">Ingresos</div>
+          <div class="sum-val ing" id="todayIng">$0</div>
+        </div>
+        <div>
+          <div class="sum-lbl">Egresos</div>
+          <div class="sum-val eg" id="todayEg">$0</div>
+        </div>
+        <div>
+          <div class="sum-lbl">Utilidad</div>
+          <div class="sum-val ut" id="todayUt">$0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-grid">
+      <button class="btn-big ing" id="goIngresoBtn">
+        <span class="btn-big-icon">↑</span>
+        <span class="btn-big-lbl">Ingresos</span>
+      </button>
+      <button class="btn-big eg" id="goEgresoBtn">
+        <span class="btn-big-icon">↓</span>
+        <span class="btn-big-lbl">Egresos</span>
+      </button>
+    </div>
+
+    <div class="mvs">
+      <h3>Movimientos recientes</h3>
+      <div id="recentList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ INGRESO subcategorías ═══ -->
+  <div class="view" id="view-ingreso">
+    <div class="back-bar">
+      <button class="back-btn back-home">← Inicio</button>
+      <div class="section-title" style="color:var(--ok)">Ingresos</div>
+    </div>
+
+    <!-- Auto-cargar ventas de la app POS -->
+    <div class="auto-card" id="autoSalesCard" style="display:none">
+      <div class="auto-title">📥 Ventas del día (POS)</div>
+      <div class="auto-desc" id="autoSalesDesc">Detectamos ventas registradas en la app de órdenes.</div>
+      <div class="auto-action">
+        <span class="auto-amt" id="autoSalesAmt">$0</span>
+        <button class="btn btn-p" id="autoSalesBtn" style="flex:0;padding:10px 18px">Registrar</button>
+      </div>
+    </div>
+
+    <div class="subcat-grid">
+      <div class="subcat" data-sub="ventas" data-kind="ingreso">
+        <div class="subcat-icon">🍸</div>
+        <div class="subcat-name">Ventas</div>
+        <div class="subcat-note">Bebidas y alimentos</div>
+      </div>
+      <div class="subcat" data-sub="evento" data-kind="ingreso">
+        <div class="subcat-icon">🎉</div>
+        <div class="subcat-name">Evento</div>
+        <div class="subcat-note">Reservaciones, fiestas</div>
+      </div>
+      <div class="subcat" data-sub="propinas" data-kind="ingreso">
+        <div class="subcat-icon">💰</div>
+        <div class="subcat-name">Propinas</div>
+        <div class="subcat-note">Tips del equipo</div>
+      </div>
+      <div class="subcat" data-sub="otro" data-kind="ingreso">
+        <div class="subcat-icon">✎</div>
+        <div class="subcat-name">Otro</div>
+        <div class="subcat-note">Especificar</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ EGRESO subcategorías ═══ -->
+  <div class="view" id="view-egreso">
+    <div class="back-bar">
+      <button class="back-btn back-home">← Inicio</button>
+      <div class="section-title" style="color:var(--danger)">Egresos</div>
+    </div>
+
+    <!-- Auto-calcular salarios -->
+    <div class="auto-card" id="autoSalaryCard" style="display:none">
+      <div class="auto-title">👥 Salarios del día</div>
+      <div class="auto-desc" id="autoSalaryDesc"></div>
+      <div class="auto-action">
+        <span class="auto-amt" id="autoSalaryAmt">$0</span>
+        <button class="btn btn-p" id="autoSalaryBtn" style="flex:0;padding:10px 18px">Registrar</button>
+      </div>
+    </div>
+
+    <div class="subcat-grid">
+      <div class="subcat" data-sub="insumos-bebidas" data-kind="egreso">
+        <div class="subcat-icon">🍾</div>
+        <div class="subcat-name">Insumos bebidas</div>
+        <div class="subcat-note">Licor, refrescos, etc</div>
+      </div>
+      <div class="subcat" data-sub="insumos-comida" data-kind="egreso">
+        <div class="subcat-icon">🥘</div>
+        <div class="subcat-name">Insumos comida</div>
+        <div class="subcat-note">Ingredientes</div>
+      </div>
+      <div class="subcat" data-sub="salarios" data-kind="egreso">
+        <div class="subcat-icon">👥</div>
+        <div class="subcat-name">Salarios</div>
+        <div class="subcat-note">Pagos al equipo</div>
+      </div>
+      <div class="subcat" data-sub="luz" data-kind="egreso">
+        <div class="subcat-icon">💡</div>
+        <div class="subcat-name">Luz</div>
+        <div class="subcat-note">CFE</div>
+      </div>
+      <div class="subcat" data-sub="internet" data-kind="egreso">
+        <div class="subcat-icon">📡</div>
+        <div class="subcat-name">Internet</div>
+        <div class="subcat-note">Conexión y telefonía</div>
+      </div>
+      <div class="subcat" data-sub="agua" data-kind="egreso">
+        <div class="subcat-icon">💧</div>
+        <div class="subcat-name">Agua / Gas</div>
+        <div class="subcat-note">Servicios básicos</div>
+      </div>
+      <div class="subcat" data-sub="renta" data-kind="egreso">
+        <div class="subcat-icon">🏠</div>
+        <div class="subcat-name">Renta</div>
+        <div class="subcat-note">Local mensual</div>
+      </div>
+      <div class="subcat" data-sub="mantenimiento" data-kind="egreso">
+        <div class="subcat-icon">🧹</div>
+        <div class="subcat-name">Limpieza</div>
+        <div class="subcat-note">Y mantenimiento</div>
+      </div>
+      <div class="subcat" data-sub="otro" data-kind="egreso">
+        <div class="subcat-icon">✎</div>
+        <div class="subcat-name">Otro</div>
+        <div class="subcat-note">Especificar</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FORM REGISTRAR MONTO ═══ -->
+  <div class="view" id="view-form">
+    <div class="back-bar">
+      <button class="back-btn" id="backFromForm">← Atrás</button>
+      <div class="section-title" id="formTitle"></div>
+    </div>
+
+    <div class="form-card">
+      <label class="flbl">Monto</label>
+      <div class="amount-prefix">
+        <input id="fAmt" class="amount-input" type="number" min="0" step="1" inputmode="decimal" placeholder="0">
+      </div>
+
+      <label class="flbl" id="descLbl">Descripción</label>
+      <textarea id="fDesc" placeholder="Notas opcionales"></textarea>
+
+      <label class="flbl">Método de pago</label>
+      <div class="pm-grid">
+        <div class="pm-opt active" data-pm="efectivo">Efectivo</div>
+        <div class="pm-opt" data-pm="tarjeta">Tarjeta</div>
+        <div class="pm-opt" data-pm="transferencia">Transfer</div>
+      </div>
+
+      <label class="flbl">Fecha</label>
+      <input id="fDate" type="date">
+
+      <div class="ferr" id="fErr"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-g" id="fCancel">Cancelar</button>
+        <button class="btn btn-p" id="fSave">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ REPORTES ═══ -->
+  <div class="view" id="view-reports">
+    <div class="back-bar">
+      <button class="back-btn back-home">← Inicio</button>
+      <div class="section-title">Reportes</div>
+    </div>
+
+    <div class="period-tabs">
+      <button class="ptab active" data-p="day">Día</button>
+      <button class="ptab" data-p="week">Semana</button>
+      <button class="ptab" data-p="month">Mes</button>
+      <button class="ptab" data-p="year">Año</button>
+    </div>
+
+    <div class="sum-date" id="reportPeriod" style="margin-bottom:14px"></div>
+
+    <div class="kpi-row">
+      <div class="kpi ing">
+        <div class="kpi-lbl">Ingresos</div>
+        <div class="kpi-val" id="rIng">$0</div>
+      </div>
+      <div class="kpi eg">
+        <div class="kpi-lbl">Egresos</div>
+        <div class="kpi-val" id="rEg">$0</div>
+      </div>
+      <div class="kpi ut">
+        <div class="kpi-lbl">Utilidad</div>
+        <div class="kpi-val" id="rUt">$0</div>
+        <div class="kpi-sub" id="rMargin"></div>
+      </div>
+    </div>
+
+    <div class="breakdown">
+      <div class="breakdown-title">
+        <span>Ingresos por subcategoría</span>
+        <span class="total" id="rIngTotal"></span>
+      </div>
+      <div id="rIngBreak"></div>
+    </div>
+    <div class="breakdown">
+      <div class="breakdown-title">
+        <span>Egresos por subcategoría</span>
+        <span class="total" id="rEgTotal"></span>
+      </div>
+      <div id="rEgBreak"></div>
+    </div>
+
+    <div class="mvs">
+      <h3>Movimientos del periodo</h3>
+      <div id="rMvList"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════════════════════
+var SU='https://biuaxkpyujypiigxolwt.supabase.co';
+var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpdWF4a3B5dWp5cGlpZ3hvbHd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDY1ODUsImV4cCI6MjA5NTQ4MjU4NX0.4MJ2WfTo6tDNImcN0E5RCy4ilU2-sXnmRb6_BB85YaQ';
+var SH={'Content-Type':'application/json','apikey':SK,'Authorization':'Bearer '+SK};
+
+function sfetch(p){return fetch(SU+p,{headers:SH}).then(function(r){return r.json();}).catch(function(){return null;});}
+function spost(p,b){return fetch(SU+p,{method:'POST',headers:Object.assign({},SH,{'Prefer':'return=minimal'}),body:JSON.stringify(b)}).catch(function(){});}
+function spatch(p,b){return fetch(SU+p,{method:'PATCH',headers:Object.assign({},SH,{'Prefer':'return=minimal'}),body:JSON.stringify(b)}).catch(function(){});}
+function sdel(p){return fetch(SU+p,{method:'DELETE',headers:SH}).catch(function(){});}
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function gid(id){return document.getElementById(id);}
+function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function money(n){return '$'+Math.round(n||0).toLocaleString('es-MX');}
+function todayISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function fmtDateLong(iso){var d=new Date(iso+'T12:00:00');var months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];return d.getDate()+' de '+months[d.getMonth()]+' '+d.getFullYear();}
+function showToast(m){var t=gid('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},2200);}
+
+var SUBCAT_LABELS={
+  'ventas':'Ventas','evento':'Evento','propinas':'Propinas','otro':'Otro',
+  'insumos-bebidas':'Insumos bebidas','insumos-comida':'Insumos comida',
+  'salarios':'Salarios','luz':'Luz','internet':'Internet','agua':'Agua/Gas',
+  'renta':'Renta','mantenimiento':'Limpieza y mantenimiento'
+};
+
+// ═══════════════════════════════════════════════════════
+// STATE & AUTH
+// ═══════════════════════════════════════════════════════
+var loggedUser=null;
+var movements=[];
+var salaryRule={threshold:1000,per_employee:200,employees:2,enabled:true};
+var formCtx={kind:null,subcategory:null,paymentMethod:'efectivo'};
+var reportPeriod='day';
+
+function loadUsers(){
+  return sfetch('/rest/v1/app_users?select=*&order=created_at.asc').then(function(r){return Array.isArray(r)?r:[];});
+}
+
+// ═══════════════════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════════════════
+gid('togglePass').addEventListener('click',function(){
+  var p=gid('loginPass');
+  if(p.type==='password'){p.type='text';this.textContent='🙈';}
+  else{p.type='password';this.textContent='👁';}
+});
+
+async function doLogin(){
+  var u=gid('loginUser').value.trim();
+  var p=gid('loginPass').value;
+  if(!u||!p){gid('loginErr').textContent='Ingresa usuario y contraseña';return;}
+  gid('loginErr').textContent='';
+  var users=await loadUsers();
+  if(!users||!users.length){gid('loginErr').textContent='Error de conexión';return;}
+  var found=null;
+  for(var i=0;i<users.length;i++){
+    if(users[i].username===u&&users[i].user_password===p){found=users[i];break;}
+  }
+  if(!found){gid('loginErr').textContent='Credenciales incorrectas';return;}
+  loggedUser=found;
+  localStorage.setItem('finance_user_id',found.id);
+  enterApp();
+}
+gid('loginBtn').addEventListener('click',doLogin);
+gid('loginPass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+gid('loginUser').addEventListener('keydown',function(e){if(e.key==='Enter')gid('loginPass').focus();});
+
+async function tryAutoLogin(){
+  var savedId=localStorage.getItem('finance_user_id');
+  if(!savedId)return false;
+  var users=await loadUsers();
+  if(!users)return false;
+  var found=users.find(function(u){return u.id===savedId;});
+  if(found){loggedUser=found;return true;}
+  return false;
+}
+
+async function enterApp(){
+  gid('loginView').style.display='none';
+  gid('appView').style.display='block';
+  gid('hUser').innerHTML=esc(loggedUser.username)+' <button class="h-logout" id="logoutBtn">Salir</button>';
+  gid('logoutBtn').addEventListener('click',function(){localStorage.removeItem('finance_user_id');location.reload();});
+  await loadConfig();
+  await refreshAll();
+}
+
+// ═══════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════
+async function loadConfig(){
+  var r=await sfetch('/rest/v1/finance_config?key=eq.salary_rule&select=*');
+  if(r&&r[0]&&r[0].value)salaryRule=r[0].value;
+}
+
+// ═══════════════════════════════════════════════════════
+// MOVEMENTS
+// ═══════════════════════════════════════════════════════
+async function loadMovements(){
+  var r=await sfetch('/rest/v1/finance_movements?select=*&order=movement_date.desc,created_at.desc&limit=2000');
+  movements=Array.isArray(r)?r:[];
+}
+
+async function insertMovement(m){
+  return spost('/rest/v1/finance_movements',m);
+}
+async function deleteMovement(id){return sdel('/rest/v1/finance_movements?id=eq.'+id);}
+
+// ═══════════════════════════════════════════════════════
+// VIEW SWITCHING
+// ═══════════════════════════════════════════════════════
+function showView(name){
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
+  gid('view-'+name).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+gid('goIngresoBtn').addEventListener('click',function(){
+  refreshIngresoAutoCards();
+  showView('ingreso');
+});
+gid('goEgresoBtn').addEventListener('click',function(){
+  refreshEgresoAutoCards();
+  showView('egreso');
+});
+gid('goReportsBtn').addEventListener('click',function(){
+  reportPeriod='day';
+  document.querySelectorAll('.ptab').forEach(function(t){t.classList.toggle('active',t.getAttribute('data-p')==='day');});
+  renderReports();
+  showView('reports');
+});
+document.querySelectorAll('.back-home').forEach(function(b){b.addEventListener('click',function(){showView('home');});});
+gid('backFromForm').addEventListener('click',function(){showView(formCtx.kind);});
+
+// Subcategoría → form
+document.querySelectorAll('.subcat').forEach(function(b){
+  b.addEventListener('click',function(){
+    formCtx.kind=b.getAttribute('data-kind');
+    formCtx.subcategory=b.getAttribute('data-sub');
+    formCtx.paymentMethod='efectivo';
+    openForm();
+  });
+});
+
+function openForm(){
+  var k=formCtx.kind, sub=formCtx.subcategory;
+  var lbl=SUBCAT_LABELS[sub]||sub;
+  gid('formTitle').textContent=(k==='ingreso'?'Ingreso · ':'Egreso · ')+lbl;
+  gid('formTitle').style.color=k==='ingreso'?'var(--ok)':'var(--danger)';
+  gid('fAmt').value='';
+  gid('fDesc').value='';
+  gid('fDesc').placeholder=sub==='otro'?'Describe el concepto (requerido)':'Notas opcionales';
+  gid('descLbl').textContent=sub==='otro'?'Concepto':'Descripción';
+  gid('fDate').value=todayISO();
+  gid('fErr').textContent='';
+  document.querySelectorAll('.pm-opt').forEach(function(o){o.classList.toggle('active',o.getAttribute('data-pm')==='efectivo');});
+  showView('form');
+  setTimeout(function(){gid('fAmt').focus();},250);
+}
+
+document.querySelectorAll('.pm-opt').forEach(function(o){
+  o.addEventListener('click',function(){
+    document.querySelectorAll('.pm-opt').forEach(function(x){x.classList.remove('active');});
+    o.classList.add('active');
+    formCtx.paymentMethod=o.getAttribute('data-pm');
+  });
+});
+
+gid('fCancel').addEventListener('click',function(){showView(formCtx.kind);});
+
+gid('fSave').addEventListener('click',async function(){
+  var amt=parseFloat(gid('fAmt').value);
+  var desc=gid('fDesc').value.trim();
+  var date=gid('fDate').value;
+  if(isNaN(amt)||amt<=0){gid('fErr').textContent='Ingresa un monto válido';return;}
+  if(formCtx.subcategory==='otro'&&!desc){gid('fErr').textContent='Describe el concepto';return;}
+  if(!date){gid('fErr').textContent='Selecciona una fecha';return;}
+  var btn=gid('fSave');btn.disabled=true;btn.textContent='Guardando…';
+  var rec={
+    id:'fm-'+uid(),
+    kind:formCtx.kind,
+    category:formCtx.kind==='ingreso'?'Ingresos':'Egresos',
+    subcategory:formCtx.subcategory,
+    description:desc,
+    amount:amt,
+    payment_method:formCtx.paymentMethod,
+    movement_date:date,
+    created_by:loggedUser?loggedUser.username:'',
+    auto_generated:false
+  };
+  await insertMovement(rec);
+  btn.disabled=false;btn.textContent='Guardar';
+  showToast('✓ '+(formCtx.kind==='ingreso'?'Ingreso':'Egreso')+' registrado · '+money(amt));
+  await refreshAll();
+  showView('home');
+});
+
+// ═══════════════════════════════════════════════════════
+// AUTO-LOAD VENTAS desde POS history
+// ═══════════════════════════════════════════════════════
+async function loadPosSalesForDate(dateISO){
+  // Toma ventas (history) del día y suma totales
+  var start=dateISO+'T00:00:00';
+  var end=dateISO+'T23:59:59';
+  var r=await sfetch('/rest/v1/history?select=total,closed_at&closed_at=gte.'+encodeURIComponent(start)+'&closed_at=lte.'+encodeURIComponent(end));
+  if(!Array.isArray(r))return 0;
+  return r.reduce(function(s,x){return s+(parseFloat(x.total)||0);},0);
+}
+
+async function refreshIngresoAutoCards(){
+  var today=todayISO();
+  var posTotal=await loadPosSalesForDate(today);
+  // ¿Ya hay un registro auto-generated de ventas hoy?
+  var existing=movements.find(function(m){return m.movement_date===today&&m.subcategory==='ventas'&&m.auto_generated;});
+  var card=gid('autoSalesCard');
+  if(posTotal>0&&!existing){
+    card.style.display='block';
+    gid('autoSalesAmt').textContent=money(posTotal);
+    gid('autoSalesDesc').textContent='Hoy se cerraron '+money(posTotal)+' en la app de órdenes. Regístralos con un toque.';
+    gid('autoSalesBtn').onclick=async function(){
+      var rec={
+        id:'fm-'+uid(),kind:'ingreso',category:'Ingresos',subcategory:'ventas',
+        description:'Ventas POS · '+fmtDateLong(today),amount:posTotal,
+        payment_method:'efectivo',movement_date:today,created_by:loggedUser?loggedUser.username:'',
+        auto_generated:true
+      };
+      await insertMovement(rec);
+      showToast('✓ Ventas registradas · '+money(posTotal));
+      await refreshAll();
+      showView('home');
+    };
+  }else{card.style.display='none';}
+}
+
+async function refreshEgresoAutoCards(){
+  if(!salaryRule.enabled){gid('autoSalaryCard').style.display='none';return;}
+  var today=todayISO();
+  // Suma ventas (POS + manual) del día
+  var posTotal=await loadPosSalesForDate(today);
+  var manualSales=movements.filter(function(m){return m.movement_date===today&&m.kind==='ingreso'&&m.subcategory==='ventas';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+  // Si manual ya cuenta el POS (auto-generated) — usar el mayor para no duplicar
+  var totalDay=Math.max(posTotal, manualSales);
+  var existing=movements.find(function(m){return m.movement_date===today&&m.subcategory==='salarios'&&m.auto_generated;});
+  var card=gid('autoSalaryCard');
+  if(totalDay>=salaryRule.threshold&&!existing){
+    var amt=salaryRule.per_employee*salaryRule.employees;
+    card.style.display='block';
+    gid('autoSalaryAmt').textContent=money(amt);
+    gid('autoSalaryDesc').textContent='Hoy se vendió '+money(totalDay)+' (≥ '+money(salaryRule.threshold)+'). Corresponden '+money(salaryRule.per_employee)+' × '+salaryRule.employees+' empleados.';
+    gid('autoSalaryBtn').onclick=async function(){
+      var rec={
+        id:'fm-'+uid(),kind:'egreso',category:'Egresos',subcategory:'salarios',
+        description:'Salarios diarios ('+salaryRule.employees+' empleados × '+money(salaryRule.per_employee)+')',
+        amount:amt,payment_method:'efectivo',movement_date:today,
+        created_by:loggedUser?loggedUser.username:'',auto_generated:true
+      };
+      await insertMovement(rec);
+      showToast('✓ Salarios registrados · '+money(amt));
+      await refreshAll();
+      showView('home');
+    };
+  }else{card.style.display='none';}
+}
+
+// ═══════════════════════════════════════════════════════
+// HOME RENDER
+// ═══════════════════════════════════════════════════════
+function sumByDate(dateISO, kind){
+  return movements.filter(function(m){return m.movement_date===dateISO&&m.kind===kind;}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+}
+
+function renderHome(){
+  var today=todayISO();
+  gid('todayDate').textContent=fmtDateLong(today);
+  var ing=sumByDate(today,'ingreso');
+  var eg=sumByDate(today,'egreso');
+  gid('todayIng').textContent=money(ing);
+  gid('todayEg').textContent=money(eg);
+  gid('todayUt').textContent=money(ing-eg);
+
+  // Movimientos recientes (últimos 8)
+  var recent=movements.slice(0,8);
+  var list=gid('recentList');
+  if(!recent.length){
+    list.innerHTML='<div class="empty"><div class="etit">Sin movimientos</div><div class="esub">Registra el primer ingreso o egreso</div></div>';
+    return;
+  }
+  list.innerHTML='';
+  recent.forEach(function(m){
+    var el=document.createElement('div');el.className='mv';
+    var lbl=SUBCAT_LABELS[m.subcategory]||m.subcategory;
+    var dateLabel=fmtDateLong(m.movement_date);
+    el.innerHTML=
+      '<span class="mv-dot '+(m.kind==='ingreso'?'ing':'eg')+'"></span>'+
+      '<div class="mv-info">'+
+        '<div class="mv-cat">'+esc(lbl)+'</div>'+
+        '<div class="mv-desc">'+esc(dateLabel)+(m.description?' · '+esc(m.description):'')+'</div>'+
+      '</div>'+
+      '<div class="mv-amt '+(m.kind==='ingreso'?'ing':'eg')+'">'+(m.kind==='ingreso'?'+':'−')+money(m.amount)+'</div>'+
+      '<button class="mv-del" title="Eliminar">✕</button>';
+    el.querySelector('.mv-del').addEventListener('click',async function(){
+      if(!confirm('¿Eliminar este movimiento?'))return;
+      await deleteMovement(m.id);
+      showToast('Movimiento eliminado');
+      await refreshAll();
+    });
+    list.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// REPORTS
+// ═══════════════════════════════════════════════════════
+function getPeriodRange(period){
+  var now=new Date();
+  var start,end,label;
+  if(period==='day'){
+    start=todayISO();end=start;label=fmtDateLong(start);
+  }else if(period==='week'){
+    var d=new Date();
+    var day=d.getDay();// 0=dom
+    var diff=(day===0?6:day-1);// week starts Mon
+    var monday=new Date(d);monday.setDate(d.getDate()-diff);
+    var sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+    start=isoOf(monday);end=isoOf(sunday);
+    label=fmtDateLong(start)+' — '+fmtDateLong(end);
+  }else if(period==='month'){
+    var d=new Date();
+    var first=new Date(d.getFullYear(),d.getMonth(),1);
+    var last=new Date(d.getFullYear(),d.getMonth()+1,0);
+    start=isoOf(first);end=isoOf(last);
+    var months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    label=months[d.getMonth()].toUpperCase()+' '+d.getFullYear();
+  }else{
+    var d=new Date();
+    start=d.getFullYear()+'-01-01';end=d.getFullYear()+'-12-31';
+    label='Año '+d.getFullYear();
+  }
+  return{start:start,end:end,label:label};
+}
+function isoOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+function renderReports(){
+  var r=getPeriodRange(reportPeriod);
+  gid('reportPeriod').textContent=r.label;
+  var filtered=movements.filter(function(m){return m.movement_date>=r.start&&m.movement_date<=r.end;});
+  var ing=filtered.filter(function(m){return m.kind==='ingreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+  var eg=filtered.filter(function(m){return m.kind==='egreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+  var ut=ing-eg;
+  gid('rIng').textContent=money(ing);
+  gid('rEg').textContent=money(eg);
+  gid('rUt').textContent=money(ut);
+  var margin=ing>0?Math.round((ut/ing)*100):0;
+  gid('rMargin').textContent=ing>0?(margin+'% margen'):'';
+
+  // Breakdown ingresos
+  renderBreakdown('rIngBreak','rIngTotal',filtered.filter(function(m){return m.kind==='ingreso';}),'ing',ing);
+  renderBreakdown('rEgBreak','rEgTotal',filtered.filter(function(m){return m.kind==='egreso';}),'eg',eg);
+
+  // Mvs list
+  var list=gid('rMvList');
+  if(!filtered.length){
+    list.innerHTML='<div class="empty"><div class="etit">Sin movimientos</div><div class="esub">en este periodo</div></div>';
+    return;
+  }
+  list.innerHTML='';
+  filtered.forEach(function(m){
+    var el=document.createElement('div');el.className='mv';
+    var lbl=SUBCAT_LABELS[m.subcategory]||m.subcategory;
+    el.innerHTML=
+      '<span class="mv-dot '+(m.kind==='ingreso'?'ing':'eg')+'"></span>'+
+      '<div class="mv-info">'+
+        '<div class="mv-cat">'+esc(lbl)+'</div>'+
+        '<div class="mv-desc">'+esc(fmtDateLong(m.movement_date))+(m.description?' · '+esc(m.description):'')+'</div>'+
+      '</div>'+
+      '<div class="mv-amt '+(m.kind==='ingreso'?'ing':'eg')+'">'+(m.kind==='ingreso'?'+':'−')+money(m.amount)+'</div>';
+    list.appendChild(el);
+  });
+}
+
+function renderBreakdown(listId,totalId,arr,cls,total){
+  gid(totalId).textContent=money(total);
+  // group by subcategory
+  var groups={};
+  arr.forEach(function(m){
+    var k=m.subcategory;
+    if(!groups[k])groups[k]={amount:0,count:0};
+    groups[k].amount+=parseFloat(m.amount);
+    groups[k].count+=1;
+  });
+  var sorted=Object.keys(groups).sort(function(a,b){return groups[b].amount-groups[a].amount;});
+  var list=gid(listId);
+  if(!sorted.length){
+    list.innerHTML='<div style="text-align:center;color:var(--faint);font-size:11px;padding:8px 0">Sin registros</div>';
+    return;
+  }
+  list.innerHTML='';
+  sorted.forEach(function(sub){
+    var g=groups[sub];
+    var pct=total>0?(g.amount/total)*100:0;
+    var el=document.createElement('div');
+    el.className='b-row '+cls;
+    el.innerHTML=
+      '<div class="b-row-name">'+
+        '<span>'+esc(SUBCAT_LABELS[sub]||sub)+'</span>'+
+        '<div class="b-bar"><div class="b-bar-fill" style="width:'+pct.toFixed(0)+'%"></div></div>'+
+      '</div>'+
+      '<span class="b-amt">'+money(g.amount)+'</span>';
+    list.appendChild(el);
+  });
+}
+
+document.querySelectorAll('.ptab').forEach(function(t){
+  t.addEventListener('click',function(){
+    document.querySelectorAll('.ptab').forEach(function(x){x.classList.remove('active');});
+    t.classList.add('active');
+    reportPeriod=t.getAttribute('data-p');
+    renderReports();
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// REFRESH
+// ═══════════════════════════════════════════════════════
+async function refreshAll(){
+  await loadMovements();
+  renderHome();
+  // Re-render reports si está activo
+  if(gid('view-reports').classList.contains('active'))renderReports();
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+(async function init(){
+  var auto=await tryAutoLogin();
+  if(auto){enterApp();}
+})();
+</script>
+</body>
+</html>
