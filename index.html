@@ -444,6 +444,15 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
       </div>
     </div>
 
+    <!-- Ingresos por método de pago -->
+    <div class="breakdown" id="paymentBreakWrap" style="display:none">
+      <div class="breakdown-title">
+        <span>Ingresos por método de pago</span>
+        <span class="total" id="rPaymentTotal"></span>
+      </div>
+      <div id="rPaymentBreak"></div>
+    </div>
+
     <div class="breakdown">
       <div class="breakdown-title">
         <span>Ingresos por subcategoría</span>
@@ -457,6 +466,15 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
         <span class="total" id="rEgTotal"></span>
       </div>
       <div id="rEgBreak"></div>
+    </div>
+
+    <!-- Ventas por producto (unificado del POS) -->
+    <div class="breakdown" id="productBreakWrap" style="display:none">
+      <div class="breakdown-title">
+        <span>Ventas por producto</span>
+        <span class="total" id="rProductTotal"></span>
+      </div>
+      <div id="rProductBreak"></div>
     </div>
 
     <div class="mvs">
@@ -581,6 +599,7 @@ async function loadMovements(){
 async function insertMovement(m){
   return spost('/rest/v1/finance_movements',m);
 }
+async function updateMovement(id,data){return spatch('/rest/v1/finance_movements?id=eq.'+id,data);}
 async function deleteMovement(id){return sdel('/rest/v1/finance_movements?id=eq.'+id);}
 
 // ═══════════════════════════════════════════════════════
@@ -620,6 +639,7 @@ document.querySelectorAll('.subcat').forEach(function(b){
 });
 
 function openForm(){
+  editingMovementId=null;
   var k=formCtx.kind, sub=formCtx.subcategory;
   var lbl=SUBCAT_LABELS[sub]||sub;
   gid('formTitle').textContent=(k==='ingreso'?'Ingreso · ':'Egreso · ')+lbl;
@@ -631,6 +651,7 @@ function openForm(){
   gid('fDate').value=todayISO();
   gid('fErr').textContent='';
   document.querySelectorAll('.pm-opt').forEach(function(o){o.classList.toggle('active',o.getAttribute('data-pm')==='efectivo');});
+  gid('fSave').textContent='Guardar';
   showView('form');
   setTimeout(function(){gid('fAmt').focus();},250);
 }
@@ -652,22 +673,36 @@ gid('fSave').addEventListener('click',async function(){
   if(isNaN(amt)||amt<=0){gid('fErr').textContent='Ingresa un monto válido';return;}
   if(formCtx.subcategory==='otro'&&!desc){gid('fErr').textContent='Describe el concepto';return;}
   if(!date){gid('fErr').textContent='Selecciona una fecha';return;}
-  var btn=gid('fSave');btn.disabled=true;btn.textContent='Guardando…';
-  var rec={
-    id:'fm-'+uid(),
-    kind:formCtx.kind,
-    category:formCtx.kind==='ingreso'?'Ingresos':'Egresos',
-    subcategory:formCtx.subcategory,
-    description:desc,
-    amount:amt,
-    payment_method:formCtx.paymentMethod,
-    movement_date:date,
-    created_by:loggedUser?loggedUser.username:'',
-    auto_generated:false
-  };
-  await insertMovement(rec);
+  var btn=gid('fSave');btn.disabled=true;btn.textContent=editingMovementId?'Actualizando…':'Guardando…';
+  if(editingMovementId){
+    await updateMovement(editingMovementId,{
+      kind:formCtx.kind,
+      category:formCtx.kind==='ingreso'?'Ingresos':'Egresos',
+      subcategory:formCtx.subcategory,
+      description:desc,
+      amount:amt,
+      payment_method:formCtx.paymentMethod,
+      movement_date:date
+    });
+    showToast('✓ Movimiento actualizado');
+    editingMovementId=null;
+  }else{
+    var rec={
+      id:'fm-'+uid(),
+      kind:formCtx.kind,
+      category:formCtx.kind==='ingreso'?'Ingresos':'Egresos',
+      subcategory:formCtx.subcategory,
+      description:desc,
+      amount:amt,
+      payment_method:formCtx.paymentMethod,
+      movement_date:date,
+      created_by:loggedUser?loggedUser.username:'',
+      auto_generated:false
+    };
+    await insertMovement(rec);
+    showToast('✓ '+(formCtx.kind==='ingreso'?'Ingreso':'Egreso')+' registrado · '+money(amt));
+  }
   btn.disabled=false;btn.textContent='Guardar';
-  showToast('✓ '+(formCtx.kind==='ingreso'?'Ingreso':'Egreso')+' registrado · '+money(amt));
   await refreshAll();
   showView('home');
 });
@@ -676,32 +711,74 @@ gid('fSave').addEventListener('click',async function(){
 // AUTO-LOAD VENTAS desde POS history
 // ═══════════════════════════════════════════════════════
 async function loadPosSalesForDate(dateISO){
-  // Toma ventas (history) del día y suma totales
+  // Devuelve total + lista de productos unificados + breakdown por método de pago
   var start=dateISO+'T00:00:00';
   var end=dateISO+'T23:59:59';
-  var r=await sfetch('/rest/v1/history?select=total,closed_at&closed_at=gte.'+encodeURIComponent(start)+'&closed_at=lte.'+encodeURIComponent(end));
-  if(!Array.isArray(r))return 0;
-  return r.reduce(function(s,x){return s+(parseFloat(x.total)||0);},0);
+  var r=await sfetch('/rest/v1/history?select=total,closed_at,items,payment_method&closed_at=gte.'+encodeURIComponent(start)+'&closed_at=lte.'+encodeURIComponent(end));
+  if(!Array.isArray(r))return{total:0,products:{},methods:{}};
+  var products={};// {name:{q,total}}
+  var methods={efectivo:0,tarjeta:0,transferencia:0};
+  var total=0;
+  r.forEach(function(h){
+    var hTotal=parseFloat(h.total)||0;
+    total+=hTotal;
+    var defaultMethod=h.payment_method||'efectivo';
+    // breakdown método por items si existe pm en cada item
+    if(Array.isArray(h.items)&&h.items.length){
+      h.items.forEach(function(it){
+        var name=it.n||'Producto';
+        var qty=parseInt(it.q)||1;
+        var price=parseFloat(it.p)||0;
+        if(!products[name])products[name]={q:0,total:0};
+        products[name].q+=qty;
+        products[name].total+=qty*price;
+        var pm=it.pm||defaultMethod;
+        if(!methods[pm])methods[pm]=0;
+        methods[pm]+=qty*price;
+      });
+    }else{
+      // sin items: todo va al método default
+      if(!methods[defaultMethod])methods[defaultMethod]=0;
+      methods[defaultMethod]+=hTotal;
+    }
+  });
+  return{total:total,products:products,methods:methods};
 }
 
 async function refreshIngresoAutoCards(){
   var today=todayISO();
-  var posTotal=await loadPosSalesForDate(today);
-  // ¿Ya hay un registro auto-generated de ventas hoy?
+  var pos=await loadPosSalesForDate(today);
+  var posTotal=pos.total;
   var existing=movements.find(function(m){return m.movement_date===today&&m.subcategory==='ventas'&&m.auto_generated;});
   var card=gid('autoSalesCard');
   if(posTotal>0&&!existing){
     card.style.display='block';
     gid('autoSalesAmt').textContent=money(posTotal);
-    gid('autoSalesDesc').textContent='Hoy se cerraron '+money(posTotal)+' en la app de órdenes. Regístralos con un toque.';
+    var nProducts=Object.keys(pos.products).length;
+    gid('autoSalesDesc').textContent='Hoy se cerraron '+money(posTotal)+' en la app de órdenes ('+nProducts+' productos). Regístralos con un toque.';
     gid('autoSalesBtn').onclick=async function(){
-      var rec={
-        id:'fm-'+uid(),kind:'ingreso',category:'Ingresos',subcategory:'ventas',
-        description:'Ventas POS · '+fmtDateLong(today),amount:posTotal,
-        payment_method:'efectivo',movement_date:today,created_by:loggedUser?loggedUser.username:'',
-        auto_generated:true
-      };
-      await insertMovement(rec);
+      // Crear un movimiento por cada método de pago con dinero recibido
+      // así finanzas distingue efectivo/tarjeta/transferencia
+      var methodsUsed=Object.keys(pos.methods).filter(function(k){return pos.methods[k]>0;});
+      if(!methodsUsed.length)methodsUsed=['efectivo'];
+      for(var i=0;i<methodsUsed.length;i++){
+        var pm=methodsUsed[i];
+        var amt=pos.methods[pm];
+        if(amt<=0)continue;
+        // Lista de productos: solo los pagados con este método
+        // Para simplicidad guardamos todos los productos completos en el primer registro
+        var prodList=(i===0)?pos.products:{};
+        var rec={
+          id:'fm-'+uid(),kind:'ingreso',category:'Ingresos',subcategory:'ventas',
+          description:'Ventas POS · '+pm.charAt(0).toUpperCase()+pm.slice(1)+' · '+fmtDateLong(today),
+          amount:amt,
+          payment_method:pm,movement_date:today,
+          created_by:loggedUser?loggedUser.username:'',
+          auto_generated:true,
+          metadata:{products:prodList,methods:(i===0?pos.methods:{}),total_day:posTotal}
+        };
+        await insertMovement(rec);
+      }
       showToast('✓ Ventas registradas · '+money(posTotal));
       await refreshAll();
       showView('home');
@@ -712,10 +789,9 @@ async function refreshIngresoAutoCards(){
 async function refreshEgresoAutoCards(){
   if(!salaryRule.enabled){gid('autoSalaryCard').style.display='none';return;}
   var today=todayISO();
-  // Suma ventas (POS + manual) del día
-  var posTotal=await loadPosSalesForDate(today);
+  var pos=await loadPosSalesForDate(today);
+  var posTotal=pos.total;
   var manualSales=movements.filter(function(m){return m.movement_date===today&&m.kind==='ingreso'&&m.subcategory==='ventas';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
-  // Si manual ya cuenta el POS (auto-generated) — usar el mayor para no duplicar
   var totalDay=Math.max(posTotal, manualSales);
   var existing=movements.find(function(m){return m.movement_date===today&&m.subcategory==='salarios'&&m.auto_generated;});
   var card=gid('autoSalaryCard');
@@ -764,25 +840,70 @@ function renderHome(){
   }
   list.innerHTML='';
   recent.forEach(function(m){
-    var el=document.createElement('div');el.className='mv';
-    var lbl=SUBCAT_LABELS[m.subcategory]||m.subcategory;
-    var dateLabel=fmtDateLong(m.movement_date);
-    el.innerHTML=
-      '<span class="mv-dot '+(m.kind==='ingreso'?'ing':'eg')+'"></span>'+
-      '<div class="mv-info">'+
-        '<div class="mv-cat">'+esc(lbl)+'</div>'+
-        '<div class="mv-desc">'+esc(dateLabel)+(m.description?' · '+esc(m.description):'')+'</div>'+
-      '</div>'+
-      '<div class="mv-amt '+(m.kind==='ingreso'?'ing':'eg')+'">'+(m.kind==='ingreso'?'+':'−')+money(m.amount)+'</div>'+
-      '<button class="mv-del" title="Eliminar">✕</button>';
-    el.querySelector('.mv-del').addEventListener('click',async function(){
-      if(!confirm('¿Eliminar este movimiento?'))return;
-      await deleteMovement(m.id);
-      showToast('Movimiento eliminado');
-      await refreshAll();
-    });
-    list.appendChild(el);
+    list.appendChild(buildMovementRow(m,true));
   });
+}
+
+function buildMovementRow(m,withActions){
+  var el=document.createElement('div');el.className='mv';
+  var lbl=SUBCAT_LABELS[m.subcategory]||m.subcategory;
+  var dateLabel=fmtDateLong(m.movement_date);
+  var pmIcon={efectivo:'💵',tarjeta:'💳',transferencia:'📱'}[m.payment_method]||'';
+  var extra=m.description?' · '+esc(m.description):'';
+  var pmTag=m.payment_method?' · '+esc(m.payment_method):'';
+  el.innerHTML=
+    '<span class="mv-dot '+(m.kind==='ingreso'?'ing':'eg')+'"></span>'+
+    '<div class="mv-info">'+
+      '<div class="mv-cat">'+esc(lbl)+' '+(pmIcon?'<span style="font-size:11px;opacity:.7">'+pmIcon+'</span>':'')+'</div>'+
+      '<div class="mv-desc">'+esc(dateLabel)+pmTag+extra+'</div>'+
+    '</div>'+
+    '<div class="mv-amt '+(m.kind==='ingreso'?'ing':'eg')+'">'+(m.kind==='ingreso'?'+':'−')+money(m.amount)+'</div>'+
+    (withActions?
+      '<button class="mv-edit" title="Editar" style="background:none;border:none;color:var(--faint);font-size:13px;cursor:pointer;padding:4px 6px;opacity:.6">✎</button>'+
+      '<button class="mv-del" title="Eliminar">✕</button>'
+      :'');
+  if(withActions){
+    el.querySelector('.mv-edit').addEventListener('click',function(){openEditForm(m);});
+    el.querySelector('.mv-del').addEventListener('click',function(){confirmDelete(m);});
+  }
+  return el;
+}
+
+// ── Confirmation modal for delete ──
+function confirmDelete(m){
+  var lbl=SUBCAT_LABELS[m.subcategory]||m.subcategory;
+  var sign=m.kind==='ingreso'?'+':'−';
+  var msg='Vas a eliminar:\n\n'+lbl+' · '+sign+money(m.amount)+'\n'+fmtDateLong(m.movement_date)+
+    (m.description?'\n"'+m.description+'"':'')+
+    '\n\nEsta acción no se puede deshacer.';
+  if(!confirm(msg))return;
+  (async function(){
+    await deleteMovement(m.id);
+    showToast('✓ Movimiento eliminado');
+    await refreshAll();
+  })();
+}
+
+// ── Edit movement: reuse form view ──
+var editingMovementId=null;
+function openEditForm(m){
+  editingMovementId=m.id;
+  formCtx.kind=m.kind;
+  formCtx.subcategory=m.subcategory;
+  formCtx.paymentMethod=m.payment_method||'efectivo';
+  var lbl=SUBCAT_LABELS[m.subcategory]||m.subcategory;
+  gid('formTitle').textContent='Editar · '+(m.kind==='ingreso'?'Ingreso':'Egreso')+' · '+lbl;
+  gid('formTitle').style.color=m.kind==='ingreso'?'var(--ok)':'var(--danger)';
+  gid('fAmt').value=m.amount;
+  gid('fDesc').value=m.description||'';
+  gid('fDate').value=m.movement_date;
+  gid('fErr').textContent='';
+  document.querySelectorAll('.pm-opt').forEach(function(o){
+    o.classList.toggle('active',o.getAttribute('data-pm')===formCtx.paymentMethod);
+  });
+  gid('fSave').textContent='Actualizar';
+  showView('form');
+  setTimeout(function(){gid('fAmt').focus();gid('fAmt').select();},250);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -821,8 +942,10 @@ function renderReports(){
   var r=getPeriodRange(reportPeriod);
   gid('reportPeriod').textContent=r.label;
   var filtered=movements.filter(function(m){return m.movement_date>=r.start&&m.movement_date<=r.end;});
-  var ing=filtered.filter(function(m){return m.kind==='ingreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
-  var eg=filtered.filter(function(m){return m.kind==='egreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+  var ingArr=filtered.filter(function(m){return m.kind==='ingreso';});
+  var egArr=filtered.filter(function(m){return m.kind==='egreso';});
+  var ing=ingArr.reduce(function(s,m){return s+parseFloat(m.amount);},0);
+  var eg=egArr.reduce(function(s,m){return s+parseFloat(m.amount);},0);
   var ut=ing-eg;
   gid('rIng').textContent=money(ing);
   gid('rEg').textContent=money(eg);
@@ -830,28 +953,88 @@ function renderReports(){
   var margin=ing>0?Math.round((ut/ing)*100):0;
   gid('rMargin').textContent=ing>0?(margin+'% margen'):'';
 
-  // Breakdown ingresos
-  renderBreakdown('rIngBreak','rIngTotal',filtered.filter(function(m){return m.kind==='ingreso';}),'ing',ing);
-  renderBreakdown('rEgBreak','rEgTotal',filtered.filter(function(m){return m.kind==='egreso';}),'eg',eg);
+  // ── Ingresos por método de pago ──
+  var methodTotals={efectivo:0,tarjeta:0,transferencia:0};
+  ingArr.forEach(function(m){
+    var pm=m.payment_method||'efectivo';
+    if(!methodTotals[pm])methodTotals[pm]=0;
+    methodTotals[pm]+=parseFloat(m.amount);
+  });
+  var totalMethods=methodTotals.efectivo+methodTotals.tarjeta+methodTotals.transferencia;
+  var paymentWrap=gid('paymentBreakWrap');
+  if(totalMethods>0){
+    paymentWrap.style.display='block';
+    gid('rPaymentTotal').textContent=money(totalMethods);
+    var labels={efectivo:'💵 Efectivo',tarjeta:'💳 Tarjeta',transferencia:'📱 Transferencia'};
+    var list=gid('rPaymentBreak');list.innerHTML='';
+    ['efectivo','tarjeta','transferencia'].forEach(function(pm){
+      var amt=methodTotals[pm];
+      var pct=totalMethods>0?(amt/totalMethods)*100:0;
+      var el=document.createElement('div');
+      el.className='b-row ing';
+      el.innerHTML=
+        '<div class="b-row-name">'+
+          '<span>'+labels[pm]+'</span>'+
+          '<div class="b-bar"><div class="b-bar-fill" style="width:'+pct.toFixed(0)+'%"></div></div>'+
+        '</div>'+
+        '<span class="b-amt">'+money(amt)+' <span style="font-size:10px;color:var(--faint);font-weight:400;letter-spacing:.1em;">· '+pct.toFixed(0)+'%</span></span>';
+      list.appendChild(el);
+    });
+  }else{
+    paymentWrap.style.display='none';
+  }
 
-  // Mvs list
-  var list=gid('rMvList');
+  // ── Breakdown ingresos / egresos ──
+  renderBreakdown('rIngBreak','rIngTotal',ingArr,'ing',ing);
+  renderBreakdown('rEgBreak','rEgTotal',egArr,'eg',eg);
+
+  // ── Ventas por producto (unificado desde metadata) ──
+  var productMap={};
+  ingArr.forEach(function(m){
+    if(m.metadata&&m.metadata.products){
+      var p=m.metadata.products;
+      Object.keys(p).forEach(function(name){
+        if(!productMap[name])productMap[name]={q:0,total:0};
+        productMap[name].q+=parseInt(p[name].q)||0;
+        productMap[name].total+=parseFloat(p[name].total)||0;
+      });
+    }
+  });
+  var productNames=Object.keys(productMap).sort(function(a,b){return productMap[b].q-productMap[a].q;});
+  var prodWrap=gid('productBreakWrap');
+  if(productNames.length){
+    prodWrap.style.display='block';
+    var totalProductRevenue=productNames.reduce(function(s,n){return s+productMap[n].total;},0);
+    var totalProductQty=productNames.reduce(function(s,n){return s+productMap[n].q;},0);
+    gid('rProductTotal').textContent=totalProductQty+' uds · '+money(totalProductRevenue);
+    var maxQ=Math.max.apply(null,productNames.map(function(n){return productMap[n].q;}));
+    var plist=gid('rProductBreak');plist.innerHTML='';
+    productNames.forEach(function(n){
+      var p=productMap[n];
+      var pct=maxQ>0?(p.q/maxQ)*100:0;
+      var el=document.createElement('div');
+      el.className='b-row ing';
+      el.innerHTML=
+        '<div class="b-row-name">'+
+          '<span><strong style="font-family:Cormorant Garamond,serif;font-size:15px;font-weight:600;color:var(--gold);margin-right:6px">'+p.q+'×</strong>'+esc(n)+'</span>'+
+          '<div class="b-bar"><div class="b-bar-fill" style="width:'+pct.toFixed(0)+'%"></div></div>'+
+        '</div>'+
+        '<span class="b-amt">'+money(p.total)+'</span>';
+      plist.appendChild(el);
+    });
+  }else{
+    prodWrap.style.display='none';
+  }
+
+  // ── Lista de movimientos ──
+  var mvList=gid('rMvList');
   if(!filtered.length){
-    list.innerHTML='<div class="empty"><div class="etit">Sin movimientos</div><div class="esub">en este periodo</div></div>';
+    mvList.innerHTML='<div class="empty"><div class="etit">Sin movimientos</div><div class="esub">en este periodo</div></div>';
     return;
   }
-  list.innerHTML='';
+  mvList.innerHTML='';
   filtered.forEach(function(m){
-    var el=document.createElement('div');el.className='mv';
-    var lbl=SUBCAT_LABELS[m.subcategory]||m.subcategory;
-    el.innerHTML=
-      '<span class="mv-dot '+(m.kind==='ingreso'?'ing':'eg')+'"></span>'+
-      '<div class="mv-info">'+
-        '<div class="mv-cat">'+esc(lbl)+'</div>'+
-        '<div class="mv-desc">'+esc(fmtDateLong(m.movement_date))+(m.description?' · '+esc(m.description):'')+'</div>'+
-      '</div>'+
-      '<div class="mv-amt '+(m.kind==='ingreso'?'ing':'eg')+'">'+(m.kind==='ingreso'?'+':'−')+money(m.amount)+'</div>';
-    list.appendChild(el);
+    mvList.appendChild(buildMovementRow(m,true));
   });
 }
 
