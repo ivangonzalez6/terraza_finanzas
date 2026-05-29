@@ -251,6 +251,7 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
           <div class="sum-val ut" id="todayUt">$0</div>
         </div>
       </div>
+      <div id="homeMethodBreak" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
 
     <div class="action-grid">
@@ -264,6 +265,9 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
       </button>
     </div>
 
+    <div style="margin-bottom:12px">
+      <button class="btn btn-g" id="goArqueoBtn" style="width:100%;padding:12px;font-size:11px;letter-spacing:.15em;text-transform:uppercase">🧮 Arqueo de caja</button>
+    </div>
     <div class="mvs">
       <h3>Movimientos recientes</h3>
       <div id="recentList"></div>
@@ -319,7 +323,7 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
     </div>
 
     <!-- Auto-calcular salarios -->
-    <div class="auto-card" id="autoSalaryCard" style="display:none">
+    <div class="auto-card" id="autoSalaryCard" style="display:none" hidden>
       <div class="auto-title">👥 Salarios del día</div>
       <div class="auto-desc" id="autoSalaryDesc"></div>
       <div class="auto-action">
@@ -390,6 +394,10 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
         <input id="fAmt" class="amount-input" type="number" min="0" step="1" inputmode="decimal" placeholder="0">
       </div>
 
+      <div id="proveedorWrap" style="display:none">
+        <label class="flbl">Proveedor</label>
+        <input id="fProv" type="text" placeholder="Nombre del proveedor">
+      </div>
       <label class="flbl" id="descLbl">Descripción</label>
       <textarea id="fDesc" placeholder="Notas opcionales"></textarea>
 
@@ -477,6 +485,9 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
       <div id="rProductBreak"></div>
     </div>
 
+    <div style="margin-bottom:12px">
+      <button class="btn btn-g" id="exportReportCSV" style="width:100%;padding:10px;font-size:10px;letter-spacing:.15em;text-transform:uppercase">⬇ Exportar CSV</button>
+    </div>
     <div class="mvs">
       <h3>Movimientos del periodo</h3>
       <div id="rMvList"></div>
@@ -484,6 +495,37 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
   </div>
 
 </div>
+
+  <!-- ═══ ARQUEO DE CAJA ═══ -->
+  <div class="view" id="view-arqueo">
+    <div class="back-bar">
+      <button class="back-btn back-home">← Inicio</button>
+      <div class="section-title">Arqueo de caja</div>
+    </div>
+    <div class="form-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span class="flbl" style="margin:0">Efectivo en sistema</span>
+        <span id="arqueoSistema" style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--gold)">$0</span>
+      </div>
+      <label class="flbl">Efectivo contado físicamente</label>
+      <div class="amount-prefix">
+        <input id="arqueoCont" type="number" min="0" step="1" inputmode="decimal" placeholder="0" class="amount-input">
+      </div>
+      <div id="arqueoDifWrap" style="display:none;margin-top:12px;padding:12px;border-radius:10px;background:#f9f4ea">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="flbl" style="margin:0">Diferencia</span>
+          <span id="arqueoDif" style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600">$0</span>
+        </div>
+        <div id="arqueoMsg" style="font-size:11px;margin-top:4px;color:var(--faint)"></div>
+      </div>
+      <label class="flbl" style="margin-top:14px">Fecha</label>
+      <input id="arqueoFecha" type="date">
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn btn-g back-home">Cancelar</button>
+        <button class="btn btn-p" id="arqueoSaveBtn">Registrar diferencia</button>
+      </div>
+    </div>
+  </div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
@@ -555,6 +597,7 @@ async function doLogin(){
   if(!found){gid('loginErr').textContent='Credenciales incorrectas';return;}
   loggedUser=found;
   localStorage.setItem('finance_user_id',found.id);
+  localStorage.setItem('finance_login_ts',Date.now().toString());
   enterApp();
 }
 gid('loginBtn').addEventListener('click',doLogin);
@@ -564,6 +607,12 @@ gid('loginUser').addEventListener('keydown',function(e){if(e.key==='Enter')gid('
 async function tryAutoLogin(){
   var savedId=localStorage.getItem('finance_user_id');
   if(!savedId)return false;
+  // Expirar sesión después de 8 horas
+  var ts=parseInt(localStorage.getItem('finance_login_ts')||'0');
+  if(Date.now()-ts>8*60*60*1000){
+    localStorage.removeItem('finance_user_id');localStorage.removeItem('finance_login_ts');
+    return false;
+  }
   var users=await loadUsers();
   if(!users)return false;
   var found=users.find(function(u){return u.id===savedId;});
@@ -606,6 +655,13 @@ async function deleteMovement(id){return sdel('/rest/v1/finance_movements?id=eq.
 // ═══════════════════════════════════════════════════════
 // VIEW SWITCHING
 // ═══════════════════════════════════════════════════════
+function showProveedorField(sub){
+  var wrap=gid('proveedorWrap');
+  if(!wrap)return;
+  var show=INSUMOS_SUBS.indexOf(sub)>=0;
+  wrap.style.display=show?'block':'none';
+  if(!show)gid('fProv').value='';
+}
 function showView(name){
   document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
   gid('view-'+name).classList.add('active');
@@ -627,7 +683,52 @@ gid('goReportsBtn').addEventListener('click',function(){
   showView('reports');
 });
 document.querySelectorAll('.back-home').forEach(function(b){b.addEventListener('click',function(){showView('home');});});
+gid('goArqueoBtn').addEventListener('click',function(){
+  var today=todayISO();
+  gid('arqueoFecha').value=today;
+  gid('arqueoCont').value='';
+  gid('arqueoDifWrap').style.display='none';
+  // Calcular efectivo en sistema hoy
+  var sysEfectivo=movements.filter(function(m){
+    return m.movement_date===today&&m.payment_method==='efectivo'&&m.kind==='ingreso';
+  }).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+  var egEfectivo=movements.filter(function(m){
+    return m.movement_date===today&&m.payment_method==='efectivo'&&m.kind==='egreso';
+  }).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+  var netEfectivo=sysEfectivo-egEfectivo;
+  gid('arqueoSistema').textContent=money(netEfectivo);
+  gid('arqueoSistema').dataset.val=netEfectivo;
+  showView('arqueo');
+});
+gid('arqueoCont').addEventListener('input',function(){
+  var sys=parseFloat(gid('arqueoSistema').dataset.val)||0;
+  var cont=parseFloat(gid('arqueoCont').value)||0;
+  var dif=cont-sys;
+  gid('arqueoDif').textContent=money(dif);
+  gid('arqueoDif').style.color=dif>=0?'var(--ok)':'var(--danger)';
+  gid('arqueoMsg').textContent=dif>0?'Sobrante: '+money(dif):dif<0?'Faltante: '+money(Math.abs(dif)):'Cuadre perfecto ✓';
+  gid('arqueoDifWrap').style.display='block';
+});
+gid('arqueoSaveBtn').addEventListener('click',async function(){
+  var sys=parseFloat(gid('arqueoSistema').dataset.val)||0;
+  var cont=parseFloat(gid('arqueoCont').value);
+  if(isNaN(cont)){showToast('Ingresa el efectivo contado');return;}
+  var dif=cont-sys;
+  var fecha=gid('arqueoFecha').value||todayISO();
+  var rec={
+    id:'arq-'+uid(),kind:dif>=0?'ingreso':'egreso',category:dif>=0?'Ingresos':'Egresos',
+    subcategory:'otro',
+    description:'Arqueo de caja · '+(dif>=0?'Sobrante':'Faltante')+' · Sistema: '+money(sys)+' · Contado: '+money(cont),
+    amount:Math.abs(dif),payment_method:'efectivo',movement_date:fecha,
+    created_by:loggedUser?loggedUser.username:''
+  };
+  await spost('/rest/v1/finance_movements',rec);
+  showToast('✓ Diferencia registrada · '+money(dif));
+  await refreshAll();
+  showView('home');
+});
 gid('backFromForm').addEventListener('click',function(){showView(formCtx.kind);});
+var INSUMOS_SUBS=['insumos-bebidas','insumos-comida'];
 
 // Subcategoría → form
 document.querySelectorAll('.subcat').forEach(function(b){
@@ -669,7 +770,8 @@ gid('fCancel').addEventListener('click',function(){showView(formCtx.kind);});
 
 gid('fSave').addEventListener('click',async function(){
   var amt=parseFloat(gid('fAmt').value);
-  var desc=gid('fDesc').value.trim();
+  var prov=gid('fProv')&&gid('fProv').value.trim();
+  var desc=(prov?'['+prov+'] ':'')+gid('fDesc').value.trim();
   var date=gid('fDate').value;
   if(isNaN(amt)||amt<=0){gid('fErr').textContent='Ingresa un monto válido';return;}
   if(formCtx.subcategory==='otro'&&!desc){gid('fErr').textContent='Describe el concepto';return;}
@@ -727,6 +829,7 @@ async function loadPosSalesForDate(dateISO){
     // breakdown método por items si existe pm en cada item
     if(Array.isArray(h.items)&&h.items.length){
       h.items.forEach(function(it){
+        if(it.note==='Descuento 2×1')return; // skip discount lines
         var name=it.n||'Producto';
         var qty=parseInt(it.q)||1;
         var price=parseFloat(it.p)||0;
@@ -797,6 +900,9 @@ async function refreshIngresoAutoCards(){
 }
 
 async function refreshEgresoAutoCards(){
+  // Salarios: siempre ocultar la tarjeta automática, se registran manualmente
+  gid('autoSalaryCard').style.display='none';
+  return;
   if(!salaryRule.enabled){gid('autoSalaryCard').style.display='none';return;}
   var today=todayISO();
   var pos=await loadPosSalesForDate(today);
@@ -841,6 +947,26 @@ function renderHome(){
   gid('todayEg').textContent=money(eg);
   gid('todayUt').textContent=money(ing-eg);
 
+  // Método de pago hoy
+  var todayMovs=movements.filter(function(m){return m.movement_date===today&&m.kind==='ingreso';});
+  var mTotals={efectivo:0,tarjeta:0,transferencia:0};
+  todayMovs.forEach(function(m){var pm=m.payment_method||'efectivo';if(mTotals[pm]!==undefined)mTotals[pm]+=parseFloat(m.amount)||0;});
+  var mBreak=gid('homeMethodBreak');
+  if(mBreak){
+    var mTotal=mTotals.efectivo+mTotals.tarjeta+mTotals.transferencia;
+    if(mTotal>0){
+      mBreak.style.display='flex';
+      var mLabels={efectivo:'💵',tarjeta:'💳',transferencia:'📱'};
+      mBreak.innerHTML='';
+      ['efectivo','tarjeta','transferencia'].forEach(function(pm){
+        if(mTotals[pm]<=0)return;
+        var span=document.createElement('span');
+        span.style.cssText='font-size:11px;color:var(--faint);flex:1;text-align:center';
+        span.innerHTML=mLabels[pm]+' <strong style="color:var(--ink)">'+money(mTotals[pm])+'</strong>';
+        mBreak.appendChild(span);
+      });
+    }else{mBreak.style.display='none';}
+  }
   // Movimientos recientes (últimos 8)
   var recent=movements.slice(0,8);
   var list=gid('recentList');
@@ -1024,23 +1150,43 @@ function renderReports(){
     gid('rProductTotal').textContent=totalProductQty+' uds · '+money(totalProductRevenue);
     var maxQ=Math.max.apply(null,productNames.map(function(n){return productMap[n].q;}));
     var plist=gid('rProductBreak');plist.innerHTML='';
-    productNames.forEach(function(n){
+    productNames.forEach(function(n,rank){
       var p=productMap[n];
       var pct=maxQ>0?(p.q/maxQ)*100:0;
+      var rankColors=['#8a6420','#4a6b2d','#1d6b7a'];
+      var qColor=rankColors[rank]||'var(--faint)';
       var el=document.createElement('div');
       el.className='b-row ing';
+      el.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)';
       el.innerHTML=
-        '<div class="b-row-name">'+
-          '<span><strong style="font-family:Cormorant Garamond,serif;font-size:15px;font-weight:600;color:var(--gold);margin-right:6px">'+p.q+'×</strong>'+esc(n)+'</span>'+
-          '<div class="b-bar"><div class="b-bar-fill" style="width:'+pct.toFixed(0)+'%"></div></div>'+
+        '<div style="min-width:48px;text-align:center;font-family:Cormorant Garamond,serif;font-size:32px;font-weight:700;line-height:1;color:'+qColor+'">'+p.q+'</div>'+
+        '<div style="flex:1">'+
+          '<div style="font-size:13px;font-weight:500;color:var(--ink)">'+esc(n)+'</div>'+
+          '<div style="height:4px;border-radius:2px;background:var(--line);margin-top:4px"><div style="height:4px;border-radius:2px;background:'+qColor+';width:'+pct.toFixed(0)+'%"></div></div>'+
         '</div>'+
-        '<span class="b-amt">'+money(p.total)+'</span>';
+        '<div style="font-size:14px;font-weight:600;color:var(--gold);white-space:nowrap">'+money(p.total)+'</div>';
       plist.appendChild(el);
     });
   }else{
     prodWrap.style.display='none';
   }
 
+  // ── Export CSV ──
+  gid('exportReportCSV').onclick=function(){
+    if(!filtered.length){showToast('Sin datos para exportar');return;}
+    var csv='fecha,tipo,categoria,subcategoria,descripcion,metodo,monto\n';
+    filtered.forEach(function(m){
+      var desc=(m.description||'').replace(/"/g,'""');
+      csv+=m.movement_date+','+m.kind+','+m.category+','+m.subcategory+',"'+desc+'",'+
+           (m.payment_method||'')+','+m.amount+'\n';
+    });
+    var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');a.href=url;a.download='finanzas_'+r.start+'_'+r.end+'.csv';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+    showToast('✓ CSV descargado');
+  };
   // ── Lista de movimientos ──
   var mvList=gid('rMvList');
   if(!filtered.length){
