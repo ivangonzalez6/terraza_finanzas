@@ -264,6 +264,14 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
       </button>
     </div>
 
+    <div class="auto-card" id="homeSalesCard" style="display:none">
+      <div class="auto-title">📥 Ventas del día (POS)</div>
+      <div class="auto-desc" id="homeSalesDesc"></div>
+      <div class="auto-action">
+        <span class="auto-amt" id="homeSalesAmt">$0</span>
+        <button class="btn btn-p" id="homeSalesBtn" style="flex:0;padding:10px 18px">Confirmar</button>
+      </div>
+    </div>
     <div class="mvs">
       <h3>Movimientos recientes</h3>
       <div id="recentList"></div>
@@ -745,43 +753,52 @@ async function loadPosSalesForDate(dateISO){
   return{total:total,products:products,methods:methods};
 }
 
+async function registrarVentasPOS(pos,today){
+  var methodsUsed=Object.keys(pos.methods).filter(function(k){return pos.methods[k]>0;});
+  if(!methodsUsed.length)methodsUsed=['efectivo'];
+  for(var i=0;i<methodsUsed.length;i++){
+    var pm=methodsUsed[i];var amt=pos.methods[pm];if(amt<=0)continue;
+    var prodList=(i===0)?pos.products:{};
+    var rec={
+      id:'fm-'+uid(),kind:'ingreso',category:'Ingresos',subcategory:'ventas',
+      description:'Ventas POS · '+pm.charAt(0).toUpperCase()+pm.slice(1)+' · '+fmtDateLong(today),
+      amount:amt,payment_method:pm,movement_date:today,
+      created_by:loggedUser?loggedUser.username:'',
+      auto_generated:true,
+      metadata:{products:prodList,methods:(i===0?pos.methods:{}),total_day:pos.total}
+    };
+    await insertMovement(rec);
+  }
+  showToast('✓ Ventas registradas · '+money(pos.total));
+  await refreshAll();
+}
 async function refreshIngresoAutoCards(){
   var today=todayISO();
   var pos=await loadPosSalesForDate(today);
   var posTotal=pos.total;
   var existing=movements.find(function(m){return m.movement_date===today&&m.subcategory==='ventas'&&m.auto_generated;});
+  var nProducts=Object.keys(pos.products).length;
+  var desc='Hoy se cerraron '+money(posTotal)+' en la app de órdenes ('+nProducts+' prod.). Confirma para registrarlos.';
+  // Home card
+  var homeCard=gid('homeSalesCard');
+  if(posTotal>0&&!existing){
+    homeCard.style.display='block';
+    gid('homeSalesAmt').textContent=money(posTotal);
+    gid('homeSalesDesc').textContent=desc;
+    gid('homeSalesBtn').onclick=async function(){
+      homeCard.style.display='none';gid('autoSalesCard').style.display='none';
+      await registrarVentasPOS(pos,today);
+    };
+  }else{homeCard.style.display='none';}
+  // Ingreso view card (secondary)
   var card=gid('autoSalesCard');
   if(posTotal>0&&!existing){
     card.style.display='block';
     gid('autoSalesAmt').textContent=money(posTotal);
-    var nProducts=Object.keys(pos.products).length;
-    gid('autoSalesDesc').textContent='Hoy se cerraron '+money(posTotal)+' en la app de órdenes ('+nProducts+' productos). Regístralos con un toque.';
+    gid('autoSalesDesc').textContent=desc;
     gid('autoSalesBtn').onclick=async function(){
-      // Crear un movimiento por cada método de pago con dinero recibido
-      // así finanzas distingue efectivo/tarjeta/transferencia
-      var methodsUsed=Object.keys(pos.methods).filter(function(k){return pos.methods[k]>0;});
-      if(!methodsUsed.length)methodsUsed=['efectivo'];
-      for(var i=0;i<methodsUsed.length;i++){
-        var pm=methodsUsed[i];
-        var amt=pos.methods[pm];
-        if(amt<=0)continue;
-        // Lista de productos: solo los pagados con este método
-        // Para simplicidad guardamos todos los productos completos en el primer registro
-        var prodList=(i===0)?pos.products:{};
-        var rec={
-          id:'fm-'+uid(),kind:'ingreso',category:'Ingresos',subcategory:'ventas',
-          description:'Ventas POS · '+pm.charAt(0).toUpperCase()+pm.slice(1)+' · '+fmtDateLong(today),
-          amount:amt,
-          payment_method:pm,movement_date:today,
-          created_by:loggedUser?loggedUser.username:'',
-          auto_generated:true,
-          metadata:{products:prodList,methods:(i===0?pos.methods:{}),total_day:posTotal}
-        };
-        await insertMovement(rec);
-      }
-      showToast('✓ Ventas registradas · '+money(posTotal));
-      await refreshAll();
-      showView('home');
+      homeCard.style.display='none';card.style.display='none';
+      await registrarVentasPOS(pos,today);
     };
   }else{card.style.display='none';}
 }
@@ -823,6 +840,7 @@ function sumByDate(dateISO, kind){
 }
 
 function renderHome(){
+  refreshIngresoAutoCards();
   var today=todayISO();
   gid('todayDate').textContent=fmtDateLong(today);
   var ing=sumByDate(today,'ingreso');
