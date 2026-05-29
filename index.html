@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -122,6 +123,42 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
 .period-tabs::-webkit-scrollbar{display:none}
 .ptab{flex:1;background:none;border:none;padding:9px 12px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;color:var(--faint);cursor:pointer;border-radius:999px;white-space:nowrap;transition:all .15s}
 .ptab.active{background:var(--ink);color:#fff}
+/* ── Period navigation ── */
+.period-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.period-label{flex:1;text-align:center;font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--dim);font-weight:600;line-height:1.3}
+.period-label span{display:block;font-family:'Cormorant Garamond',serif;font-size:15px;letter-spacing:.05em;text-transform:none;font-weight:600;color:var(--ink);margin-top:1px}
+.period-arrow{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--dim);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-family:'Cormorant Garamond',serif;line-height:1}
+.period-arrow:hover{border-color:var(--gold);color:var(--gold)}
+.period-arrow:active{background:var(--gold-pale)}
+.period-arrow:disabled{opacity:.3;cursor:not-allowed;color:var(--faint)}
+
+/* ── Summary cards row ── */
+.period-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.ps-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 10px;text-align:center}
+.ps-card.ing{border-top:3px solid var(--ok)}
+.ps-card.eg{border-top:3px solid var(--danger)}
+.ps-card.ut{border-top:3px solid var(--gold);grid-column:1/-1}
+.ps-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:3px}
+.ps-val{font-family:'Cormorant Garamond',serif;font-size:clamp(24px,6vw,32px);font-weight:600;line-height:1.05}
+.ps-val.ing{color:var(--ok)}
+.ps-val.eg{color:var(--danger)}
+.ps-val.ut{color:var(--gold)}
+.ps-sub{font-size:9px;color:var(--faint);margin-top:3px;letter-spacing:.08em}
+
+/* ── Chart mini bars ── */
+.mini-chart{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;overflow:hidden}
+.mini-chart-title{font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:12px}
+.chart-bars{display:flex;align-items:flex-end;gap:3px;height:60px}
+.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;position:relative}
+.chart-bar-stack{width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:55px;gap:1px}
+.chart-bar-ing{border-radius:3px 3px 0 0;min-height:2px;transition:opacity .15s;background:var(--ok);opacity:.7}
+.chart-bar-eg{border-radius:0 0 3px 3px;min-height:2px;transition:opacity .15s;background:var(--danger);opacity:.7}
+.chart-bar-wrap.selected .chart-bar-ing,.chart-bar-wrap.selected .chart-bar-eg{opacity:1}
+.chart-bar-wrap:hover .chart-bar-ing,.chart-bar-wrap:hover .chart-bar-eg{opacity:1}
+.chart-bar-lbl{font-size:7px;color:var(--faint);text-align:center;font-weight:600;letter-spacing:0;white-space:nowrap}
+.chart-tooltip{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:9px;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:10}
+.chart-bar-wrap.selected .chart-tooltip{opacity:1}
+
 
 .kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
 .kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 12px;text-align:center}
@@ -434,9 +471,38 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
       <button class="ptab" data-p="year">Año</button>
     </div>
 
-    <div class="sum-date" id="reportPeriod" style="margin-bottom:14px"></div>
+    <!-- Period navigation -->
+    <div class="period-nav">
+      <button id="periodPrev" class="period-arrow">‹</button>
+      <div class="period-label" id="reportPeriodType">Día</div>
+      <button id="periodNext" class="period-arrow" disabled>›</button>
+    </div>
+    <div class="period-label" id="reportPeriod" style="text-align:center;margin-bottom:10px;font-size:12px;letter-spacing:.2em;color:var(--dim)"></div>
 
-    <div class="kpi-row">
+    <!-- Mini chart (se rellena dinámicamente) -->
+    <div class="mini-chart" id="miniChartWrap" style="display:none">
+      <div class="mini-chart-title" id="miniChartTitle"></div>
+      <div class="chart-bars" id="miniChartBars"></div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="period-summary">
+      <div class="ps-card ing">
+        <div class="ps-lbl">Ingresos</div>
+        <div class="ps-val ing" id="rIng2">$0</div>
+      </div>
+      <div class="ps-card eg">
+        <div class="ps-lbl">Egresos</div>
+        <div class="ps-val eg" id="rEg2">$0</div>
+      </div>
+      <div class="ps-card ut">
+        <div class="ps-lbl">Utilidad</div>
+        <div class="ps-val ut" id="rUt2">$0</div>
+        <div class="ps-sub" id="rMargin2"></div>
+      </div>
+    </div>
+
+    <div class="kpi-row" style="display:none">
       <div class="kpi ing">
         <div class="kpi-lbl">Ingresos</div>
         <div class="kpi-val" id="rIng">$0</div>
@@ -568,7 +634,7 @@ var loggedUser=null;
 var movements=[];
 var salaryRule={threshold:1000,per_employee:200,employees:2,enabled:true};
 var formCtx={kind:null,subcategory:null,paymentMethod:'efectivo'};
-var reportPeriod='day';
+var reportPeriod='day'; var reportOffset=0;
 
 function loadUsers(){
   return sfetch('/rest/v1/app_users?select=*&order=created_at.asc').then(function(r){return Array.isArray(r)?r:[];});
@@ -678,7 +744,9 @@ gid('goEgresoBtn').addEventListener('click',function(){
 });
 gid('goReportsBtn').addEventListener('click',function(){
   reportPeriod='day';
+  reportOffset=0;
   document.querySelectorAll('.ptab').forEach(function(t){t.classList.toggle('active',t.getAttribute('data-p')==='day');});
+  updatePeriodNav();
   renderReports();
   showView('reports');
 });
@@ -1050,49 +1118,85 @@ function openEditForm(m){
 // ═══════════════════════════════════════════════════════
 // REPORTS
 // ═══════════════════════════════════════════════════════
-function getPeriodRange(period){
+function getPeriodRange(period, offset){
+  offset=offset||0;
   var now=new Date();
-  var start,end,label;
+  var start,end,label,shortLabel;
+  var months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var monthsShort=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   if(period==='day'){
-    start=todayISO();end=start;label=fmtDateLong(start);
+    var d=new Date();
+    d.setDate(d.getDate()+offset);
+    start=isoOf(d);end=start;
+    label=fmtDateLong(start);
+    var isToday=offset===0;
+    var isYesterday=offset===-1;
+    shortLabel=isToday?'HOY':isYesterday?'AYER':fmtDateShort(start);
   }else if(period==='week'){
     var d=new Date();
-    var day=d.getDay();// 0=dom
-    var diff=(day===0?6:day-1);// week starts Mon
+    d.setDate(d.getDate()+(offset*7));
+    var day=d.getDay();
+    var diff=(day===0?6:day-1);
     var monday=new Date(d);monday.setDate(d.getDate()-diff);
     var sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
     start=isoOf(monday);end=isoOf(sunday);
+    var wn=getWeekNumber(monday);
     label=fmtDateLong(start)+' — '+fmtDateLong(end);
+    shortLabel='SEM '+wn+' · '+monday.getFullYear();
   }else if(period==='month'){
     var d=new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth()+offset);
     var first=new Date(d.getFullYear(),d.getMonth(),1);
     var last=new Date(d.getFullYear(),d.getMonth()+1,0);
     start=isoOf(first);end=isoOf(last);
-    var months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
     label=months[d.getMonth()].toUpperCase()+' '+d.getFullYear();
+    shortLabel=monthsShort[d.getMonth()]+' '+d.getFullYear();
   }else{
-    var d=new Date();
-    start=d.getFullYear()+'-01-01';end=d.getFullYear()+'-12-31';
-    label='Año '+d.getFullYear();
+    var yr=(new Date()).getFullYear()+offset;
+    start=yr+'-01-01';end=yr+'-12-31';
+    label='Año '+yr;
+    shortLabel=String(yr);
   }
-  return{start:start,end:end,label:label};
+  return{start:start,end:end,label:label,shortLabel:shortLabel||label};
+}
+
+function fmtDateShort(iso){
+  var d=new Date(iso+'T12:00:00');
+  var months=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return d.getDate()+' '+months[d.getMonth()];
+}
+
+function getWeekNumber(d){
+  var onejan=new Date(d.getFullYear(),0,1);
+  return Math.ceil((((d-onejan)/86400000)+onejan.getDay()+1)/7);
 }
 function isoOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 
 function renderReports(){
-  var r=getPeriodRange(reportPeriod);
-  gid('reportPeriod').textContent=r.label;
+  updatePeriodNav();
+  var r=getPeriodRange(reportPeriod,reportOffset);
+  gid('reportPeriod').textContent='';
   var filtered=movements.filter(function(m){return m.movement_date>=r.start&&m.movement_date<=r.end;});
   var ingArr=filtered.filter(function(m){return m.kind==='ingreso';});
   var egArr=filtered.filter(function(m){return m.kind==='egreso';});
   var ing=ingArr.reduce(function(s,m){return s+parseFloat(m.amount);},0);
   var eg=egArr.reduce(function(s,m){return s+parseFloat(m.amount);},0);
   var ut=ing-eg;
+  // Update new cards
+  gid('rIng2').textContent=money(ing);
+  gid('rEg2').textContent=money(eg);
+  gid('rUt2').textContent=money(ut);
+  var margin=ing>0?Math.round((ut/ing)*100):0;
+  gid('rMargin2').textContent=ing>0?(margin+'% margen'):'Sin ventas';
+  // Keep old hidden refs
   gid('rIng').textContent=money(ing);
   gid('rEg').textContent=money(eg);
   gid('rUt').textContent=money(ut);
   var margin=ing>0?Math.round((ut/ing)*100):0;
   gid('rMargin').textContent=ing>0?(margin+'% margen'):'';
+  // Render mini chart
+  renderMiniChart(r);
 
   // ── Ingresos por método de pago ──
   var methodTotals={efectivo:0,tarjeta:0,transferencia:0};
@@ -1199,6 +1303,133 @@ function renderReports(){
   });
 }
 
+// ── Mini bar chart ──
+function renderMiniChart(r){
+  var wrap=gid('miniChartWrap');
+  var bars=gid('miniChartBars');
+  var titleEl=gid('miniChartTitle');
+  
+  // Build sub-periods for the chart
+  var subPeriods=[];
+  
+  if(reportPeriod==='day'){
+    // Hourly buckets (grouped in 2h for readability)
+    var hours=['0-5','6-7','8-9','10-11','12-13','14-15','16-17','18-19','20-21','22-23'];
+    var ranges=[[0,5],[6,7],[8,9],[10,11],[12,13],[14,15],[16,17],[18,19],[20,21],[22,23]];
+    ranges.forEach(function(h,i){
+      var movs=movements.filter(function(m){
+        if(m.movement_date!==r.start)return false;
+        var hr=parseInt((m.created_at||'').substring(11,13))||0;
+        return hr>=h[0]&&hr<=h[1];
+      });
+      var ing=movs.filter(function(m){return m.kind==='ingreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+      var eg=movs.filter(function(m){return m.kind==='egreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+      subPeriods.push({lbl:hours[i],ing:ing,eg:eg,date:r.start,isToday:true});
+    });
+    titleEl.textContent='Movimientos por hora';
+  } else if(reportPeriod==='week'){
+    // Daily — Mon to Sun
+    var dayNames=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+    var startDate=new Date(r.start+'T12:00:00');
+    for(var i=0;i<7;i++){
+      var d=new Date(startDate);d.setDate(startDate.getDate()+i);
+      var iso=isoOf(d);
+      var movs=movements.filter(function(m){return m.movement_date===iso;});
+      var ing=movs.filter(function(m){return m.kind==='ingreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+      var eg=movs.filter(function(m){return m.kind==='egreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+      subPeriods.push({lbl:dayNames[i],ing:ing,eg:eg,date:iso});
+    }
+    titleEl.textContent='Ingresos y egresos por día';
+  } else if(reportPeriod==='month'){
+    // Weekly buckets within the month
+    var startDate=new Date(r.start+'T12:00:00');
+    var endDate=new Date(r.end+'T12:00:00');
+    // Group by week number
+    var weekMap={};
+    var weekOrder=[];
+    var cur=new Date(startDate);
+    while(cur<=endDate){
+      var iso=isoOf(cur);
+      var wn=getWeekNumber(cur);
+      var key='Sem '+wn;
+      if(!weekMap[key]){weekMap[key]={ing:0,eg:0,date:iso,lbl:key};weekOrder.push(key);}
+      var movs=movements.filter(function(m){return m.movement_date===iso;});
+      weekMap[key].ing+=movs.filter(function(m){return m.kind==='ingreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+      weekMap[key].eg+=movs.filter(function(m){return m.kind==='egreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+      cur.setDate(cur.getDate()+1);
+    }
+    weekOrder.forEach(function(k){subPeriods.push(weekMap[k]);});
+    titleEl.textContent='Ingresos y egresos por semana';
+  } else {
+    // Yearly — monthly buckets
+    var months=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    var yr=parseInt(r.start.substring(0,4));
+    for(var i=0;i<12;i++){
+      var mStart=yr+'-'+String(i+1).padStart(2,'0')+'-01';
+      var mEnd=yr+'-'+String(i+1).padStart(2,'0')+'-'+String(new Date(yr,i+1,0).getDate()).padStart(2,'0');
+      var movs=movements.filter(function(m){return m.movement_date>=mStart&&m.movement_date<=mEnd;});
+      var ing=movs.filter(function(m){return m.kind==='ingreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+      var eg=movs.filter(function(m){return m.kind==='egreso';}).reduce(function(s,m){return s+parseFloat(m.amount);},0);
+      subPeriods.push({lbl:months[i],ing:ing,eg:eg,date:mStart});
+    }
+    titleEl.textContent='Ingresos y egresos por mes';
+  }
+  
+  var hasData=subPeriods.some(function(p){return p.ing>0||p.eg>0;});
+  if(!hasData){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  
+  var maxVal=Math.max.apply(null,subPeriods.map(function(p){return p.ing+p.eg;}));
+  bars.innerHTML='';
+  
+  subPeriods.forEach(function(p){
+    var ingH=maxVal>0?Math.round((p.ing/maxVal)*50):0;
+    var egH=maxVal>0?Math.round((p.eg/maxVal)*50):0;
+    
+    var el=document.createElement('div');
+    el.className='chart-bar-wrap';
+    el.innerHTML=
+      '<div class="chart-tooltip">+'+money(p.ing)+' −'+money(p.eg)+'</div>'+
+      '<div class="chart-bar-stack">'+
+        (ingH>0?'<div class="chart-bar-ing" style="height:'+ingH+'px"></div>':'')+
+        (egH>0?'<div class="chart-bar-eg" style="height:'+egH+'px"></div>':'')+
+      '</div>'+
+      '<div class="chart-bar-lbl">'+p.lbl+'</div>';
+    
+    el.addEventListener('click',function(){
+      // Navigate to that specific sub-period
+      if(reportPeriod==='month'||reportPeriod==='year'){
+        var diff;
+        if(reportPeriod==='year'){
+          var m=parseInt(p.date.substring(5,7))-1;
+          var curMonth=(new Date()).getMonth();
+          var curYear=(new Date()).getFullYear();
+          var targetYear=parseInt(p.date.substring(0,4));
+          diff=(targetYear-curYear)*12+(m-curMonth);
+          document.querySelectorAll('.ptab').forEach(function(t){t.classList.toggle('active',t.getAttribute('data-p')==='month');});
+          reportPeriod='month';reportOffset=diff;
+        }else{
+          // week click: navigate to week containing this date
+          var target=new Date(p.date+'T12:00:00');
+          var today=new Date();
+          var diffDays=Math.round((target-today)/86400000);
+          var diffWeeks=Math.floor(diffDays/7);
+          document.querySelectorAll('.ptab').forEach(function(t){t.classList.toggle('active',t.getAttribute('data-p')==='week');});
+          reportPeriod='week';reportOffset=diffWeeks;
+        }
+        updatePeriodNav();renderReports();
+        return;
+      }
+      // Toggle selected highlight
+      document.querySelectorAll('.chart-bar-wrap').forEach(function(x){x.classList.remove('selected');});
+      el.classList.toggle('selected');
+    });
+    
+    bars.appendChild(el);
+  });
+}
+
+
 function renderBreakdown(listId,totalId,arr,cls,total){
   gid(totalId).textContent=money(total);
   // group by subcategory
@@ -1236,9 +1467,30 @@ document.querySelectorAll('.ptab').forEach(function(t){
     document.querySelectorAll('.ptab').forEach(function(x){x.classList.remove('active');});
     t.classList.add('active');
     reportPeriod=t.getAttribute('data-p');
+    reportOffset=0;
+    updatePeriodNav();
     renderReports();
   });
 });
+
+// Nav arrows
+gid('periodPrev').addEventListener('click',function(){
+  reportOffset--;
+  updatePeriodNav();
+  renderReports();
+});
+gid('periodNext').addEventListener('click',function(){
+  if(reportOffset<0){reportOffset++;updatePeriodNav();renderReports();}
+});
+
+function updatePeriodNav(){
+  var labels={day:'Día',week:'Semana',month:'Mes',year:'Año'};
+  var r=getPeriodRange(reportPeriod,reportOffset);
+  gid('reportPeriodType').innerHTML=labels[reportPeriod]+'<span>'+r.label+'</span>';
+  gid('reportPeriod').textContent='';
+  // Disable next when at current period
+  gid('periodNext').disabled=(reportOffset>=0);
+}
 
 // ═══════════════════════════════════════════════════════
 // REFRESH
