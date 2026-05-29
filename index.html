@@ -572,6 +572,7 @@ async function tryAutoLogin(){
 }
 
 async function enterApp(){
+  startAutoRefresh();
   gid('loginView').style.display='none';
   gid('appView').style.display='block';
   gid('hUser').innerHTML=esc(loggedUser.username)+' <button class="h-logout" id="logoutBtn">Salir</button>';
@@ -1099,9 +1100,26 @@ document.querySelectorAll('.ptab').forEach(function(t){
 async function refreshAll(){
   await loadMovements();
   renderHome();
-  // Re-render reports si está activo
   if(gid('view-reports').classList.contains('active'))renderReports();
 }
+
+// ══ AUTO-REFRESH EN TIEMPO REAL ══
+var _refreshTimer=null;
+function startAutoRefresh(){
+  if(_refreshTimer)clearInterval(_refreshTimer);
+  // Refresca cada 20 segundos en background
+  _refreshTimer=setInterval(async function(){
+    await loadMovements();
+    renderHome();
+  },20000);
+}
+// Refresca al volver a la pestaña/app
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&loggedUser){refreshAll();}
+});
+window.addEventListener('focus',function(){
+  if(loggedUser){refreshAll();}
+});
 
 // ═══════════════════════════════════════════════════════
 // INIT
