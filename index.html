@@ -879,6 +879,11 @@ function confirmDelete(m){
   if(!confirm(msg))return;
   (async function(){
     await deleteMovement(m.id);
+    // Si es auto-generado desde ventas POS, también elimina de history
+    if(m.auto_generated&&m.subcategory==='ventas'&&m.metadata&&m.metadata.total_day){
+      var histId=m.id.replace('fm-','hist-');
+      await sdel('/rest/v1/history?total=eq.'+m.metadata.total_day+'&movement_date=eq.'+m.movement_date);
+    }
     showToast('✓ Movimiento eliminado');
     await refreshAll();
   })();
