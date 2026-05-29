@@ -264,14 +264,6 @@ textarea{resize:vertical;min-height:60px;font-family:inherit}
       </button>
     </div>
 
-    <div class="auto-card" id="homeSalesCard" style="display:none">
-      <div class="auto-title">📥 Ventas del día (POS)</div>
-      <div class="auto-desc" id="homeSalesDesc"></div>
-      <div class="auto-action">
-        <span class="auto-amt" id="homeSalesAmt">$0</span>
-        <button class="btn btn-p" id="homeSalesBtn" style="flex:0;padding:10px 18px">Confirmar</button>
-      </div>
-    </div>
     <div class="mvs">
       <h3>Movimientos recientes</h3>
       <div id="recentList"></div>
@@ -840,7 +832,6 @@ function sumByDate(dateISO, kind){
 }
 
 function renderHome(){
-  refreshIngresoAutoCards();
   var today=todayISO();
   gid('todayDate').textContent=fmtDateLong(today);
   var ing=sumByDate(today,'ingreso');
